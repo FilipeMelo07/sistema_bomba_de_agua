@@ -1,78 +1,212 @@
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C6 | ESP32-H2 | ESP32-P4 | ESP32-S2 | ESP32-S3 |
-| ----------------- | ----- | -------- | -------- | -------- | -------- | -------- | -------- | -------- |
+##  Autor
 
-# ESP-MQTT sample application
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+* **Luis Filipe de Melo Nogueira** - [filipemelonogueira@gmail.com](filipemelonogueira@gmail.com)
 
-This example connects to the broker URI selected using `idf.py menuconfig` (using mqtt tcp transport) and as a demonstration subscribes/unsubscribes and send a message on certain topic.
-(Please note that the public broker is maintained by the community so may not be always available, for details please see this [disclaimer](https://iot.eclipse.org/getting-started/#sandboxes))
+# Sistema de Automação de Bomba D'água com ESP32 e Painel Web
 
-Note: If the URI equals `FROM_STDIN` then the broker address is read from stdin upon application startup (used for testing)
+Este projeto  de automação e monitoramento de bomba d'água, composto por duas partes principais:
 
-It uses ESP-MQTT library which implements mqtt client to connect to mqtt broker with MQTT version 5.
+1.  **Firmware para ESP32:** O cérebro do sistema, responsável por ler o sensor de nível, controlar a bomba e se comunicar via MQTT.
+2.  **Painel de Controle Web:** Um servidor Node.js que fornece uma interface web amigável para monitorar e controlar o ESP32 em tempo real.
 
-The more details about MQTT v5, please refer to [official website](https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html)
+---
 
-## How to use example
+Este repositório contém o código-fonte do firmware para um sistema embarcado de automação e monitoramento de bomba d'água, desenvolvido para a plataforma ESP32.
 
-### Hardware Required
+O segundo repositório contém o servidor Web [https://github.com/FilipeMelo07/sistema_bomba_de_agua_node.git](https://github.com/FilipeMelo07/sistema_bomba_de_agua_node.git)
 
-This example can be executed on any ESP32 board, the only required interface is WiFi and connection to internet.
+#  Firmware de Controle de Bomba D'água para ESP32
 
-### Configure the project
 
-* Open the project configuration menu (`idf.py menuconfig`)
-* Configure Wi-Fi or Ethernet under "Example Connection Configuration" menu. See "Establishing Wi-Fi or Ethernet Connection" section in [examples/protocols/README.md](../../README.md) for more details.
-* MQTT v5 protocol (`CONFIG_MQTT_PROTOCOL_5`) under "ESP-MQTT Configurations" menu is enabled by `sdkconfig.defaults`.
+##  Sobre o Firmware
 
-### Build and Flash
+Este software transforma um ESP32 em um controlador inteligente de bomba d'água. Ele utiliza um sensor ultrassônico para medir o nível do reservatório e se conecta a um broker MQTT para receber comandos e enviar dados de status em tempo real. A lógica foi desenvolvida para ser robusta, eficiente e flexível, permitindo total controle remoto.
 
-Build the project and flash it to the board, then run monitor tool to view serial output:
+##  Funcionalidades do Firmware
+
+* **Conectividade Wi-Fi:** Conecta-se a uma rede Wi-Fi local para acesso à internet.
+* **Cliente MQTT:** Comunica-se com um broker MQTT para enviar dados e receber comandos de forma assíncrona.
+* **Modo de Operação Duplo:**
+    * **Automático:** Controla a bomba com base em limites de distância pré-definidos.
+    * **Manual:** Permite que a bomba seja ligada ou desligada por comandos MQTT diretos.
+* **Configuração Remota:** Os limites de distância para o modo automático podem ser atualizados em tempo de execução via MQTT, sem necessidade de regravar o firmware.
+* **Feedback Visual:** Utiliza LEDs para indicar o status da conexão MQTT, o modo de operação e o estado da bomba.
+
+##  Hardware Necessário
+
+Para montar o circuito, você precisará dos seguintes componentes:
+
+* Microcontrolador **ESP32** (qualquer variante com pinos para protoboard)
+* Sensor Ultrassônico **HC-SR04**
+* Módulo **Relé de 1 Canal** (5V)
+* **LEDs** (3 unidades de cores diferentes)
+* **Resistores** (~330Ω para cada LED)
+* Protoboard e Fios Jumper
+
+###  Mapa de Pinos
+
+Conecte os componentes ao ESP32 conforme a tabela abaixo:
+
+| Pino (GPIO) | Dispositivo Conectado      |
+| :---------- | :------------------------- |
+| **GPIO 2** | LED Indicador de Modo      |
+| **GPIO 12** | Módulo Relé (IN)           |
+| **GPIO 14** | LED de Status MQTT         |
+| **GPIO 25** | Sensor HC-SR04 (Echo)      |
+| **GPIO 26** | Sensor HC-SR04 (Trig)      |
+| **GPIO 27** | LED de Status do Relé      |
+
+### Diagrama eletrônico
+![](/img/diagrama.png)
+
+##  Guia de Instalação e Execução
+
+Este tutorial guiará você desde o clone do repositório até a conexão do seu ESP32 com o broker MQTT.
+
+### **Pré-requisitos**
+
+1.  **Ambiente ESP-IDF Configurado:** Você precisa ter o framework de desenvolvimento da Espressif (**ESP-IDF**) instalado e configurado corretamente em sua máquina.
+
+2.  **Broker MQTT:** Você precisa de acesso a um broker MQTT. Pode ser um broker local (como o **Mosquitto**) ou um serviço em nuvem. Anote o endereço (URL ou IP) do seu broker.
+
+3.  **Cliente MQTT (Opcional, para testes):** É altamente recomendado ter um cliente MQTT como o [MQTT Explorer](http://mqtt-explorer.com/) para visualizar as mensagens e testar os comandos.
+
+### **Passo 1: Clonar o Repositório**
+
+Abra seu terminal e clone este repositório para sua máquina local:
+
+git clone [https://github.com/FilipeMelo07/sistema_bomba_de_agua.git](https://github.com/FilipeMelo07/sistema_bomba_de_agua.git)
+
+Abra o projeto com o VsCode
+
+### Passo 2: Configurar o Projeto
+
+O ESP-IDF usa um sistema de configuração baseado em menus (menuconfig). É aqui que você definirá suas credenciais de Wi-Fi e o endereço do broker.
+
+Navegue até a pasta do projeto e abra o menu de configuração:
+
+na parte inferior da tela abra o menuconfig
+
+No menu, navegue até a seção Example Connection Configuration.
+
+Configure o WiFi SSID (nome da sua rede Wi-Fi).
+
+Configure o WiFi Password (senha da sua rede Wi-Fi).
+
+Agora, navegue até a seção Example Configuration.
+
+Configure o Broker URL. Insira o endereço completo do seu broker MQTT.
+
+Exemplo local: **mqtt://192.168.1.10**
+
+
+Salve as configurações e saia do menuconfig.
+
+### Passo 3: Compilar e Gravar o Firmware
+Agora que o projeto está configurado, vamos compilar o código e enviá-lo para o ESP32.
+
+Conecte o ESP32 ao seu computador via USB.
+
+no menu inferior
+
+escolha a porta que o seu esp está conectado, (exemplo:**com4**)
+
+click em **ESP-IDF: Build, flash and Monitor**
+
+### Passo 4: Verificar a Conexão
+Se tudo correu bem, o monitor s  começará a exibir os logs de inicialização do ESP32.
+
+Você deverá ver as seguintes mensagens de sucesso:
+
+Logs indicando a conexão bem-sucedida com a sua rede Wi-Fi e a obtenção de um endereço IP.
+
+Logo em seguida, a mensagem: MQTT CONECTADO.
+
+Neste momento, o LED de status MQTT (conectado ao GPIO 14) deverá acender, confirmando visualmente que a conexão foi estabelecida com sucesso.
+
+Seu ESP32 está agora online, executando o firmware, conectado ao broker e pronto para enviar dados do sensor e receber comandos! Você pode usar o MQTT Explorer para se inscrever nos tópicos de status e ver as mensagens chegando.
+
+###  Referência dos Tópicos MQTT
+Este firmware interage com os seguintes tópicos:
+
+Tópico (Topic)	Ação (O que o firmware faz)
+
+* esp32/comando/modo	[INSCREVE-SE] Ouve por comandos para mudar o modo.
+* esp32/comando/rele	[INSCREVE-SE] Ouve por comandos para ligar/desligar.
+* esp32/comando/dist_ligar	[INSCREVE-SE] Ouve por novos valores para o limite de ligar.
+* esp32/comando/dist_desligar	[INSCREVE-SE] Ouve por novos valores para o limite de desligar.
+* esp32/status/modo	[PUBLICA] Envia seu modo de operação atual.
+* esp32/status/bomba	[PUBLICA] Envia o estado atual da bomba.
+* esp32/status/distancia	[PUBLICA] Envia a distância medida pelo sensor.
+
+
+
+##  Painel de Controle Web (Servidor Node.js)
+
+Para controlar e monitorar o ESP32 de forma amigável, este projeto inclui um servidor web leve, construído com **Node.js** e **Express**. Ele atua como uma ponte entre o usuário (através do navegador) e o dispositivo (via MQTT), fornecendo uma interface gráfica em tempo real.
+
+###  Funcionalidades do Painel
+
+* **Interface Web Responsiva:** Acesse o painel de qualquer dispositivo com um navegador, seja um computador ou smartphone.
+* **Visualização em Tempo Real:** Veja o status atual da bomba, o modo de operação e a distância medida pelo sensor, tudo atualizado automaticamente sem precisar recarregar a página.
+* **Controle Total:** Altere o modo de operação entre **Automático** e **Manual**.
+* **Comandos Manuais:** Ligue e desligue a bomba diretamente pela interface (quando em modo manual).
+* **Configuração Remota:** Ajuste e envie os limites de distância para ligar e desligar a bomba no modo automático.
+
+###  Guia de Instalação do Painel
+
+Siga os passos abaixo para rodar o servidor do painel de controle na sua máquina local.
+
+#### **Pré-requisitos**
+
+1.  **Node.js e npm:** Você precisa ter o [Node.js](https://nodejs.org/) instalado. O npm (Node Package Manager) já vem incluído. Para verificar se estão instalados, abra um terminal e digite `node -v` e `npm -v`.
+
+
+#### **Passo 1: Preparar o Projeto**
+
+Abra um terminal e clone este repositório para sua máquina:
+
+git clone [https://github.com/FilipeMelo07/sistema_bomba_de_agua_node.git](https://github.com/FilipeMelo07/sistema_bomba_de_agua_node.git)
+
+2.  Abra um terminal na mesma pasta do projeto.
+
+### **Passo 2: Instalar as Dependências**
+
+O servidor depende de duas bibliotecas principais: `express` e `mqtt`. Execute o comando abaixo para instalá-las:
+
+```bash
+npm install express mqtt
+```
+Este comando criará uma pasta `node_modules` e um arquivo `package-lock.json`.
+
+#### **Passo 3: Iniciar o Broker MQTT**
+
+Se o seu broker MQTT (como o Mosquitto) não estiver rodando, inicie-o agora em um terminal separado.
+
+#### **Passo 4: Rodar o Servidor**
+
+Agora que as dependências estão instaladas e o broker está online, inicie o servidor Node.js com o seguinte comando:
+
+```bash
+node servidor.js
+```
+
+Se tudo ocorrer bem, você verá as seguintes mensagens no terminal:
 
 ```
-idf.py -p PORT flash monitor
+Conectado com sucesso ao Broker MQTT em: mqtt://localhost
+Inscrito nos tópicos de status do ESP32!
+Servidor web iniciado! Acesse em http://localhost:3000
 ```
 
-(To exit the serial monitor, type ``Ctrl-]``.)
+#### **Passo 5: Acessar o Painel**
 
-See the Getting Started Guide for full steps to configure and use ESP-IDF to build projects.
+Abra seu navegador de internet e acesse o endereço:
 
-## Example Output
+**[http://localhost:3000](http://localhost:3000)**
 
-```
-I (5119) esp_netif_handlers: example_connect: sta ip: 192.168.3.143, mask: 255.255.255.0, gw: 192.168.3.1
-I (5119) example_connect: Got IPv4 event: Interface "example_connect: sta" address: 192.168.3.143
-I (5619) example_connect: Got IPv6 event: Interface "example_connect: sta" address: fe80:0000:0000:0000:c64f:33ff:fe24:6645, type: ESP_IP6_ADDR_IS_LINK_LOCAL
-I (5619) example_connect: Connected to example_connect: sta
-I (5629) example_connect: - IPv4 address: 192.168.3.143
-I (5629) example_connect: - IPv6 address: fe80:0000:0000:0000:c64f:33ff:fe24:6645, type: ESP_IP6_ADDR_IS_LINK_LOCAL
-I (5649) MQTT5_EXAMPLE: Other event id:7
-W (6299) wifi:<ba-add>idx:0 (ifx:0, 34:29:12:43:c5:40), tid:7, ssn:0, winSize:64
-I (7439) MQTT5_EXAMPLE: MQTT_EVENT_CONNECTED
-I (7439) MQTT5_EXAMPLE: sent publish successful, msg_id=53118
-I (7439) MQTT5_EXAMPLE: sent subscribe successful, msg_id=41391
-I (7439) MQTT5_EXAMPLE: sent subscribe successful, msg_id=13695
-I (7449) MQTT5_EXAMPLE: sent unsubscribe successful, msg_id=55594
-I (7649) mqtt5_client: MQTT_MSG_TYPE_PUBACK return code is -1
-I (7649) MQTT5_EXAMPLE: MQTT_EVENT_PUBLISHED, msg_id=53118
-I (8039) mqtt5_client: MQTT_MSG_TYPE_SUBACK return code is 0
-I (8049) MQTT5_EXAMPLE: MQTT_EVENT_SUBSCRIBED, msg_id=41391
-I (8049) MQTT5_EXAMPLE: sent publish successful, msg_id=0
-I (8059) mqtt5_client: MQTT_MSG_TYPE_SUBACK return code is 2
-I (8059) MQTT5_EXAMPLE: MQTT_EVENT_SUBSCRIBED, msg_id=13695
-I (8069) MQTT5_EXAMPLE: sent publish successful, msg_id=0
-I (8079) MQTT5_EXAMPLE: MQTT_EVENT_DATA
-I (8079) MQTT5_EXAMPLE: key is board, value is esp32
-I (8079) MQTT5_EXAMPLE: key is u, value is user
-I (8089) MQTT5_EXAMPLE: key is p, value is password
-I (8089) MQTT5_EXAMPLE: payload_format_indicator is 1
-I (8099) MQTT5_EXAMPLE: response_topic is /topic/test/response
-I (8109) MQTT5_EXAMPLE: correlation_data is 123456
-I (8109) MQTT5_EXAMPLE: content_type is 
-I (8119) MQTT5_EXAMPLE: TOPIC=/topic/qos1
-I (8119) MQTT5_EXAMPLE: DATA=data_3
-I (8129) mqtt5_client: MQTT_MSG_TYPE_UNSUBACK return code is 0
-I (8129) MQTT5_EXAMPLE: MQTT_EVENT_UNSUBSCRIBED, msg_id=55594
-I (8139) mqtt_client: Client asked to disconnect
-I (9159) MQTT5_EXAMPLE: MQTT_EVENT_DISCONNECTED
-```
+Pronto! Agora você pode ver os dados enviados pelo seu ESP32 em tempo real e enviar comandos para controlar a bomba d'água diretamente da página web.
+
+---
+
+
